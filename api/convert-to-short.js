@@ -19,8 +19,8 @@ function getStorage() {
   return new Storage(opts);
 }
 
-async function downloadAndUploadToGCS(videoURL) {
-  const youtube = await getClient();
+async function downloadAndUploadToGCS(videoURL, clientType = 'ANDROID') {
+  const youtube = await getClient({ clientType });
   const videoId = extractVideoId(videoURL);
   const info = await youtube.getBasicInfo(videoId);
   const stream = await info.download({ type: 'video+audio', quality: 'bestefficiency' });
@@ -56,14 +56,17 @@ module.exports = async (req, res) => {
 
     if (hasGcsKey) {
       console.log('[Short] Downloading from YouTube and uploading to GCS...');
-      try {
-        gcsInputPath = await downloadAndUploadToGCS(url);
-        console.log('[Short] Uploaded to', gcsInputPath);
-      } catch (err) {
-        console.log('[Short] First attempt failed, retrying:', err.message);
-        resetClient();
-        gcsInputPath = await downloadAndUploadToGCS(url);
-        console.log('[Short] Retry OK, uploaded to', gcsInputPath);
+      const clientTypes = ['ANDROID', 'WEB', 'WEB_EMBEDDED_PLAYER'];
+      for (const clientType of clientTypes) {
+        try {
+          resetClient();
+          gcsInputPath = await downloadAndUploadToGCS(url, clientType);
+          console.log('[Short] Uploaded to', gcsInputPath, '(client:', clientType, ')');
+          break;
+        } catch (err) {
+          console.log('[Short]', clientType, 'failed:', err.message);
+          if (clientType === clientTypes[clientTypes.length - 1]) throw err;
+        }
       }
     } else {
       console.log('[Short] No GCP_SA_KEY, Cloud Run will download from YouTube directly');
