@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
 
     if (hasGcsKey) {
       console.log('[Short] Downloading from YouTube and uploading to GCS...');
-      const clientTypes = ['ANDROID', 'WEB', 'WEB_EMBEDDED_PLAYER'];
+      const clientTypes = ['ANDROID', 'WEB', 'iOS', 'MWEB', 'WEB_EMBEDDED_PLAYER'];
       for (const clientType of clientTypes) {
         try {
           resetClient();
@@ -65,7 +65,12 @@ module.exports = async (req, res) => {
           break;
         } catch (err) {
           console.log('[Short]', clientType, 'failed:', err.message);
-          if (clientType === clientTypes[clientTypes.length - 1]) throw err;
+          if (clientType === clientTypes[clientTypes.length - 1]) {
+            const msg = err.message || 'Conversion failed';
+            throw new Error(msg.includes('login') || msg.includes('unavailable')
+              ? `${msg}. This video may be age-restricted or require login.`;
+              : msg);
+          }
         }
       }
     } else {

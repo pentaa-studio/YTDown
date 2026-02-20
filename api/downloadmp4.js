@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   try {
     const videoId = extractVideoId(videoURL);
     let result;
-    const clientTypes = ['ANDROID', 'WEB', 'WEB_EMBEDDED_PLAYER'];
+    const clientTypes = ['ANDROID', 'WEB', 'iOS', 'MWEB', 'WEB_EMBEDDED_PLAYER'];
 
     for (const clientType of clientTypes) {
       try {
