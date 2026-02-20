@@ -85,7 +85,12 @@ module.exports = async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
       if (!response.ok) {
-        const data = await response.json();
+        let data = { error: 'Conversion failed' };
+        try {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : data;
+        } catch (_) {}
+        if (data.error && data.hint) data.error = `${data.error} ${data.hint}`;
         res.status(response.status).json(data);
         return;
       }
@@ -94,17 +99,20 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      data = { error: 'Invalid response from conversion service' };
+    }
     if (!response.ok) {
       console.error('[Short] Cloud Run error:', response.status, data);
       const msg = (data.error || '').toLowerCase();
       if (response.status === 500 && (msg.includes('login') || msg.includes('required'))) {
-        return res.status(500).json({
-          error: data.error,
-          hint: !hasGcsKey
-            ? 'Set GCP_SA_KEY in Vercel env vars so the video is downloaded on Vercel and uploaded to GCS.'
-            : undefined,
-        });
+        const hint = !hasGcsKey
+          ? 'Configure GCP_SA_KEY in Vercel (Settings → Environment Variables) so the video is downloaded on Vercel and uploaded to GCS.'
+          : undefined;
+        return res.status(500).json({ error: data.error, hint });
       }
       return res.status(response.status).json(data);
     }

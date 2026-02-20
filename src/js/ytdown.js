@@ -89,7 +89,7 @@ function convertToShort(url) {
         body: JSON.stringify({ url: url, duration: 60, stream: true })
     })
     .then(function(r) {
-        if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || 'Conversion failed'); });
+        if (!r.ok) return r.json().then(function(d) { throw new Error([d.error, d.hint].filter(Boolean).join(' ') || 'Conversion failed'); });
         return r.body.getReader();
     })
     .then(function(reader) {
