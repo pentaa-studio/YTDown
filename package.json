@@ -19,5 +19,8 @@
   },
   "devDependencies": {
     "electron": "^24.1.2"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
