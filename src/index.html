@@ -2,28 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="./css/main.css">
+    <title>YTDown - YouTube Downloader</title>
     <link rel="shortcut icon" href="./favicon.png">
-    <link rel="stylesheet" href="./css/customCheckbox.css">
-    <title>YTDown - Youtube Downloader</title>
+    <link rel="stylesheet" href="./css/main.css">
 </head>
-<body background="./bg.jpg">
-    <h1 class="heading">YTDown - Youtube Downloader</h1>
-    <input class="URL-input" placeholder="Youtube Video Link">
-    <button class="convert-button">Convert</button>
-    <form action="">
-        <div class="quality">
-            <label class="form-control">
-                <input type="checkbox" class="highquality_mp4" disabled>
-                High Quality Video (In DEV)
+<body>
+    <div class="app">
+        <div class="card">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="6" fill="#FF0033"/>
+                    <path d="M9.5 7.5v9l7-4.5-7-4.5z" fill="white"/>
+                </svg>
+                <h1>YTDown</h1>
             </div>
-        <label class="form-control">
-            <input class="isAudio" type="checkbox" name="checkbox"/>
-            Download Audio?
-        </label>
-    </form>
+            <p class="subtitle">Download YouTube videos as MP4 or MP3</p>
+
+            <div class="input-group">
+                <input
+                    type="url"
+                    class="url-input"
+                    placeholder="Paste a YouTube link here..."
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+                <button class="download-btn" disabled>
+                    <span class="btn-text">Download</span>
+                    <span class="btn-loader" hidden>
+                        <span class="spinner"></span>
+                    </span>
+                </button>
+            </div>
+
+            <div class="error-msg" hidden></div>
+
+            <div class="format-toggle">
+                <button class="format-btn active" data-format="mp4">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7"/>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    MP4 Video
+                </button>
+                <button class="format-btn" data-format="mp3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    MP3 Audio
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Paste any YouTube URL and click download. That's it.</p>
+        </footer>
+    </div>
+
     <script src="./js/ytdown.js"></script>
 </body>
 </html>

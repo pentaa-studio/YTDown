@@ -1,58 +1,69 @@
 const express = require('express');
 const cors = require('cors');
-const ytdl = require('ytdl-core');
-const ytmux = require('ytdl-core-muxer');
+const { Readable } = require('stream');
+const { getClient, resetClient, extractVideoId } = require('./lib/youtube');
 const exp = express();
-const logC = console.log;
 
-// Express and YTDL Code
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 exp.use(cors());
-exp.use(express.static(__dirname + '//src'));
-exp.listen(port, () => {
-    logC(`Server Initialized on port ${port}`)
+exp.use(express.static(__dirname + '/src'));
+
+async function fetchVideo(videoId, quality) {
+    const youtube = await getClient();
+    const info = await youtube.getBasicInfo(videoId);
+    const title = (info.basic_info.title || 'video').replace(/[|\\/<>:"?*]/g, '');
+    const q = quality === 'high' ? 'best' : 'bestefficiency';
+    const stream = await info.download({ type: 'video+audio', quality: q });
+    return { title, stream };
+}
+
+exp.get('/downloadmp4', async (req, res) => {
+    const { URL: videoURL, Quality } = req.query;
+    if (!videoURL) return res.status(400).json({ error: 'Missing URL parameter' });
+
+    try {
+        const videoId = extractVideoId(videoURL);
+        let result;
+        try {
+            result = await fetchVideo(videoId, Quality);
+        } catch (err) {
+            resetClient();
+            result = await fetchVideo(videoId, Quality);
+        }
+        res.header('Content-Disposition', `attachment; filename="${result.title}.mp4"`);
+        res.header('Content-Type', 'video/mp4');
+        Readable.fromWeb(result.stream).pipe(res);
+    } catch (err) {
+        console.error('Download MP4 error:', err.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to download video' });
+    }
 });
 
-exp.get('/downloadmp4', async(req,res) => {
-    var URL = req.query.URL;
-    var Quality = req.query.Quality;
-    
-    ytdl.getInfo(URL).then(info => {
-        const videoTitle = info.videoDetails.title.replace('|','').toString('ascii');
-        logC(`Video Name: ${videoTitle}`);
-    
-        res.header('Content-Disposition', `attachment; filename="${videoTitle}.mp4"`);
-        if (Quality == "high")
-        {
-            ytmux.download(URL, {
-                format: 'mp4',
-                filter: 'audioandvideo', 
-                quality: 'highestvideo'
-            }).pipe(res);
-            logC('Format: MP4, Quality: High')
-        } else if (Quality == "low")
-        {
-            ytdl(URL, {
-                format: 'mp4'
-            }).pipe(res);
-            logC('Format: MP4, Quality: Low')
-        }
-    })
-    });
+exp.get('/downloadmp3', async (req, res) => {
+    const { URL: videoURL } = req.query;
+    if (!videoURL) return res.status(400).json({ error: 'Missing URL parameter' });
 
-exp.get('/downloadmp3', (req,res) => {
-    var URL = req.query.URL;
-    ytdl.getInfo(URL).then(info => {
-    const videoTitle = info.videoDetails.title.replace('|','').toString('ascii');
-    console.log(`Video Name: ${videoTitle}`);
-    res.header('Content-Disposition', `attachment; filename="${videoTitle}.mp3"`);
-    ytdl(URL, {
-        format: 'mp3',
-        filter: 'audioonly'
-        }).pipe(res);
-    });
-    logC('Format: MP3')
+    try {
+        const videoId = extractVideoId(videoURL);
+        let result;
+        try {
+            result = await fetchVideo(videoId);
+        } catch (err) {
+            resetClient();
+            result = await fetchVideo(videoId);
+        }
+        res.header('Content-Disposition', `attachment; filename="${result.title}.mp3"`);
+        res.header('Content-Type', 'audio/mpeg');
+        Readable.fromWeb(result.stream).pipe(res);
+    } catch (err) {
+        console.error('Download MP3 error:', err.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to download audio' });
+    }
+});
+
+exp.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });

@@ -1,45 +1,70 @@
-var convertBtn = document.querySelector('.convert-button');
-var URLinput = document.querySelector('.URL-input');
-var isAudio_checkbox = document.querySelector('.isAudio');
-var highquality_mp4 = document.querySelector('.highquality_mp4');
-var highqualityLabel = document.querySelector('.highqualityLabel');
-var quality = document.querySelector('.quality');
+var urlInput = document.querySelector('.url-input');
+var downloadBtn = document.querySelector('.download-btn');
+var btnText = document.querySelector('.btn-text');
+var btnLoader = document.querySelector('.btn-loader');
+var errorMsg = document.querySelector('.error-msg');
+var formatBtns = document.querySelectorAll('.format-btn');
+var currentFormat = 'mp4';
 
-isAudio_checkbox.addEventListener('click', () => {
-    if (isAudio_checkbox)
-    {
-        if (!isAudio_checkbox.checked) {
-            quality.style.display = 'block';
-          } else if (isAudio_checkbox.checked) {
-            quality.style.display = 'none';
-            highquality_mp4.checked = false;
-          }
-    }
-})
+var YT_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)/;
 
-convertBtn.addEventListener('click', () => {
-    console.log(`URL: ${URLinput.value}`);
-    sendURL(URLinput.value);
+formatBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        formatBtns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentFormat = btn.dataset.format;
+    });
 });
 
-function sendURL(URL) {
-    // Check if isAudio is checked
-    if (isAudio_checkbox.checked)
-    {
-        // Download in Audio Format
-        window.location.href = `http://localhost:4000/downloadmp3?URL=${URL}`;
-    } 
-    else if (!isAudio_checkbox.checked) {
-        // check if highquality_mp4 is checked
-        if (highquality_mp4.checked)
-        {
-            // Download in Video Format with High Quality
-            window.location.href = `http://localhost:4000/downloadmp4?URL=${URL}&Quality=high`;
-        } else if (!highquality_mp4.checked) {
-            // Download in Video Format with Low Quality
-            window.location.href = `http://localhost:4000/downloadmp4?URL=${URL}&Quality=low`;
-        }
-        
+urlInput.addEventListener('input', function() {
+    var valid = YT_REGEX.test(urlInput.value.trim());
+    downloadBtn.disabled = !valid;
+    if (valid) hideError();
+});
+
+urlInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !downloadBtn.disabled) {
+        startDownload();
     }
-    
+});
+
+downloadBtn.addEventListener('click', startDownload);
+
+function startDownload() {
+    var url = urlInput.value.trim();
+    if (!YT_REGEX.test(url)) {
+        showError('Please enter a valid YouTube URL.');
+        return;
+    }
+
+    hideError();
+    setLoading(true);
+
+    var endpoint = currentFormat === 'mp3' ? '/downloadmp3' : '/downloadmp4';
+    var downloadUrl = endpoint + '?URL=' + encodeURIComponent(url);
+
+    var iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = downloadUrl;
+    document.body.appendChild(iframe);
+
+    setTimeout(function() {
+        setLoading(false);
+        document.body.removeChild(iframe);
+    }, 5000);
+}
+
+function setLoading(loading) {
+    downloadBtn.classList.toggle('loading', loading);
+    btnText.hidden = loading;
+    btnLoader.hidden = !loading;
+}
+
+function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.hidden = false;
+}
+
+function hideError() {
+    errorMsg.hidden = true;
 }
