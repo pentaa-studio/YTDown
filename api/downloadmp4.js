@@ -1,8 +1,8 @@
 const { Readable } = require('stream');
 const { getClient, resetClient, extractVideoId } = require('../lib/youtube');
 
-async function fetchVideo(videoId, quality) {
-  const youtube = await getClient();
+async function fetchVideo(videoId, quality, clientType = 'ANDROID') {
+  const youtube = await getClient({ clientType });
   const info = await youtube.getBasicInfo(videoId);
   const title = (info.basic_info.title || 'video').replace(/[|\\/<>:"?*]/g, '');
 
@@ -22,13 +22,17 @@ module.exports = async (req, res) => {
   try {
     const videoId = extractVideoId(videoURL);
     let result;
+    const clientTypes = ['ANDROID', 'WEB', 'WEB_EMBEDDED_PLAYER'];
 
-    try {
-      result = await fetchVideo(videoId, Quality);
-    } catch (err) {
-      console.error('MP4 first attempt failed, refreshing client:', err.message);
-      resetClient();
-      result = await fetchVideo(videoId, Quality);
+    for (const clientType of clientTypes) {
+      try {
+        resetClient();
+        result = await fetchVideo(videoId, Quality, clientType);
+        break;
+      } catch (err) {
+        console.error('MP4', clientType, 'failed:', err.message);
+        if (clientType === clientTypes[clientTypes.length - 1]) throw err;
+      }
     }
 
     res.setHeader('Content-Disposition', `attachment; filename="${result.title}.mp4"`);

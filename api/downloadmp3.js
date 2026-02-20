@@ -1,8 +1,8 @@
 const { Readable } = require('stream');
 const { getClient, resetClient, extractVideoId } = require('../lib/youtube');
 
-async function fetchAudio(videoId) {
-  const youtube = await getClient();
+async function fetchAudio(videoId, clientType = 'ANDROID') {
+  const youtube = await getClient({ clientType });
   const info = await youtube.getBasicInfo(videoId);
   const title = (info.basic_info.title || 'audio').replace(/[|\\/<>:"?*]/g, '');
   const stream = await info.download({ type: 'video+audio', quality: 'bestefficiency' });
@@ -19,12 +19,17 @@ module.exports = async (req, res) => {
   try {
     const videoId = extractVideoId(videoURL);
     let result;
+    const clientTypes = ['ANDROID', 'WEB', 'WEB_EMBEDDED_PLAYER'];
 
-    try {
-      result = await fetchAudio(videoId);
-    } catch (err) {
-      resetClient();
-      result = await fetchAudio(videoId);
+    for (const clientType of clientTypes) {
+      try {
+        resetClient();
+        result = await fetchAudio(videoId, clientType);
+        break;
+      } catch (err) {
+        console.error('MP3', clientType, 'failed:', err.message);
+        if (clientType === clientTypes[clientTypes.length - 1]) throw err;
+      }
     }
 
     res.setHeader('Content-Disposition', `attachment; filename="${result.title}.mp3"`);
