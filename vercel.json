@@ -1,13 +1,16 @@
 {
   "version": 2,
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
+  "framework": null,
   "functions": {
     "api/*.js": {
       "maxDuration": 300
     }
   },
   "rewrites": [
-    { "source": "/downloadmp4", "destination": "/api/downloadmp4" },
-    { "source": "/downloadmp3", "destination": "/api/downloadmp3" }
+    {"source": "/downloadmp4", "destination": "/api/downloadmp4"},
+    {"source": "/downloadmp3", "destination": "/api/downloadmp3"},
+    {"source": "/convert", "destination": "/api/convert-to-short"}
   ]
 }
