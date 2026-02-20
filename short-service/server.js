@@ -35,21 +35,25 @@ function extractVideoId(url) {
   }
 }
 
-async function downloadVideo(url) {
+async function downloadVideo(url, onProgress) {
+  const emit = (p) => onProgress && onProgress(p);
+  emit(5);
   const youtube = await getYoutubeClient();
   const videoId = extractVideoId(url);
   const info = await youtube.getBasicInfo(videoId);
+  emit(10);
   const stream = await info.download({ type: 'video+audio', quality: 'bestefficiency' });
 
   const tmpPath = path.join(TMP_DIR, `input-${Date.now()}.mp4`);
   const writeStream = fs.createWriteStream(tmpPath);
   const nodeStream = Readable.fromWeb(stream);
   await pipeline(nodeStream, writeStream);
+  emit(30);
   return { tmpPath, title: (info.basic_info.title || 'short').replace(/[|\\/<>:"?*]/g, '') };
 }
 
 function convertToShort(inputPath, outputPath, options = {}) {
-  const { start = 0, duration = 60 } = options;
+  const { start = 0, duration = 60, onProgress } = options;
   const width = 1080;
   const height = 1920;
 
@@ -71,12 +75,28 @@ function convertToShort(inputPath, outputPath, options = {}) {
 
     const ffmpeg = spawn('ffmpeg', args);
     let stderr = '';
+    let lastProgress = 30;
 
-    ffmpeg.stderr.on('data', (d) => { stderr += d.toString(); });
+    ffmpeg.stderr.on('data', (d) => {
+      stderr += d.toString();
+      const m = stderr.match(/time=(\d+):(\d+):(\d+)/g);
+      if (m && m.length) {
+        const last = m[m.length - 1];
+        const [, h, min, sec] = last.match(/time=(\d+):(\d+):(\d+)/) || [];
+        const elapsed = (parseInt(h) || 0) * 3600 + (parseInt(min) || 0) * 60 + parseInt(sec) || 0;
+        const p = Math.min(85, 30 + (elapsed / duration) * 55);
+        if (p > lastProgress + 2) {
+          lastProgress = p;
+          onProgress && onProgress(Math.round(p));
+        }
+      }
+    });
 
     ffmpeg.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`FFmpeg exited ${code}: ${stderr.slice(-500)}`));
+      if (code === 0) {
+        onProgress && onProgress(85);
+        resolve();
+      } else reject(new Error(`FFmpeg exited ${code}: ${stderr.slice(-500)}`));
     });
 
     ffmpeg.on('error', reject);
@@ -93,36 +113,94 @@ async function uploadToGCS(localPath, destName) {
   const [signedUrl] = await bucket.file(destName).getSignedUrl({
     action: 'read',
     expires: Date.now() + 24 * 60 * 60 * 1000,
+    version: 'v4',
   });
   return signedUrl;
 }
 
-app.post('/convert', async (req, res) => {
-  const { url, start = 0, duration = 60 } = req.body;
+function emitProgress(res, data) {
+  res.write(JSON.stringify(data) + '\n');
+}
 
-  if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' });
+async function downloadFromGCS(gcsPath, onProgress) {
+  const emit = (p) => onProgress && onProgress(p);
+  emit(5);
+  const storage = new Storage();
+  const [bucketName, ...pathParts] = gcsPath.replace('gs://', '').split('/');
+  const filePath = pathParts.join('/');
+  const bucket = storage.bucket(bucketName);
+  const file = bucket.file(filePath);
+  const tmpPath = path.join(TMP_DIR, `input-${Date.now()}.mp4`);
+  await file.download({ destination: tmpPath });
+  emit(30);
+  const title = path.basename(filePath, '.mp4').replace(/[|\\/<>:"?*]/g, '');
+  return { tmpPath, title: title || 'short' };
+}
+
+app.post('/convert', async (req, res) => {
+  const { url, gcsInputPath, start = 0, duration = 60, stream: wantStream } = req.body;
+
+  if (!url && !gcsInputPath) {
+    return res.status(400).json({ error: 'Missing url or gcsInputPath parameter' });
   }
 
   let inputPath;
   let outputPath;
   let title;
 
+  const onProgress = wantStream ? (p) => emitProgress(res, { progress: p }) : null;
+
+  if (wantStream) {
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  }
+
   try {
-    const info = await downloadVideo(url);
+    let info;
+    if (gcsInputPath) {
+      console.log('[Short] Downloading from GCS:', gcsInputPath);
+      info = await downloadFromGCS(gcsInputPath, onProgress);
+    } else {
+      console.log('[Short] Downloading from YouTube:', url);
+      info = await downloadVideo(url, onProgress);
+    }
     inputPath = info.tmpPath;
     title = info.title;
     outputPath = path.join(TMP_DIR, `short-${Date.now()}.mp4`);
 
-    await convertToShort(inputPath, outputPath, { start, duration });
+    console.log('[Short] Converting with FFmpeg...');
+    await convertToShort(inputPath, outputPath, { start, duration, onProgress });
 
+    console.log('[Short] Uploading result to GCS...');
+    if (onProgress) emitProgress(res, { progress: 90 });
     const destName = `shorts/${Date.now()}-${title.slice(0, 50)}.mp4`;
     const downloadUrl = await uploadToGCS(outputPath, destName);
+    if (onProgress) emitProgress(res, { progress: 100 });
 
-    res.json({ success: true, downloadUrl, title });
+    if (gcsInputPath) {
+      const storage = new Storage();
+      const [bucketName, ...pathParts] = gcsInputPath.replace('gs://', '').split('/');
+      try {
+        await storage.bucket(bucketName).file(pathParts.join('/')).delete();
+      } catch (e) { /* ignore */ }
+    }
+
+    console.log('[Short] Done:', title);
+    if (wantStream) {
+      emitProgress(res, { success: true, downloadUrl, title });
+      res.end();
+    } else {
+      res.json({ success: true, downloadUrl, title });
+    }
   } catch (err) {
-    console.error('Convert error:', err);
-    res.status(500).json({ error: err.message || 'Conversion failed' });
+    console.error('[Short] Convert error:', err.message, err.stack);
+    if (wantStream) {
+      emitProgress(res, { error: err.message });
+      res.end();
+    } else {
+      res.status(500).json({ error: err.message || 'Conversion failed' });
+    }
   } finally {
     [inputPath, outputPath].forEach((p) => {
       if (p && fs.existsSync(p)) fs.unlinkSync(p);

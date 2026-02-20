@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "outputDirectory": "src",
+  "outputDirectory": "dist",
   "functions": {
     "api/*.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
   },
   "rewrites": [

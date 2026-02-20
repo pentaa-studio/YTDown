@@ -8,7 +8,10 @@ if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
 }
 const port = process.env.PORT || 3000;
+const SHORT_SERVICE_URL = 'https://ytdown-short-791554179661.europe-west1.run.app';
+
 exp.use(cors());
+exp.use(express.json());
 exp.use(express.static(__dirname + '/src'));
 
 async function fetchVideo(videoId, quality) {
@@ -62,6 +65,11 @@ exp.get('/downloadmp3', async (req, res) => {
         console.error('Download MP3 error:', err.message);
         if (!res.headersSent) res.status(500).json({ error: 'Failed to download audio' });
     }
+});
+
+exp.post('/api/convert-to-short', async (req, res) => {
+    const handler = require('./api/convert-to-short');
+    return handler(req, res);
 });
 
 exp.listen(port, () => {

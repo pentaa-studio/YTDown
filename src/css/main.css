@@ -120,6 +120,97 @@ body {
     to { transform: rotate(360deg); }
 }
 
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #FF0033;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 13px;
+    color: #888;
+    min-width: 36px;
+}
+
+.status-msg {
+    background: #1a2a3a;
+    border: 1px solid #2a4a6a;
+    color: #7dd3fc;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.status-msg.success {
+    background: #0f2a1a;
+    border-color: #1a4a2a;
+    color: #86efac;
+}
+
+.download-link-container {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    background: #0f2a1a;
+    border: 1px solid #1a4a2a;
+    border-radius: 8px;
+}
+
+.download-link-container:not([hidden]) {
+    display: flex;
+}
+
+.download-link {
+    flex: 1;
+    color: #86efac;
+    font-size: 14px;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.download-link:hover {
+    text-decoration: underline;
+}
+
+.copy-link-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #1a4a2a;
+    color: #86efac;
+    border: 1px solid #2a6a3a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.copy-link-btn:hover {
+    background: #2a6a3a;
+}
+
 .error-msg {
     background: #331111;
     border: 1px solid #552222;
@@ -132,6 +223,7 @@ body {
 
 .format-toggle {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 20px;
 }
