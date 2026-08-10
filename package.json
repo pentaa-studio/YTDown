@@ -1,6 +1,6 @@
 {
   "name": "ytdown",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "description": "YTDown - Youtube Downloader",
   "main": "server.js",
   "scripts": {
@@ -12,11 +12,12 @@
   "author": "ArticPolar Apps",
   "license": "MIT",
   "dependencies": {
+    "@google-cloud/storage": "^7.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "youtubei.js": "^16.0.1",
-    "@google-cloud/storage": "^7.7.0"
+    "undici": "^7.22.0",
+    "youtubei.js": "^16.0.1"
   },
   "devDependencies": {
     "electron": "^24.1.2"

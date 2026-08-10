@@ -68,7 +68,7 @@ module.exports = async (req, res) => {
           if (clientType === clientTypes[clientTypes.length - 1]) {
             const msg = err.message || 'Conversion failed';
             throw new Error(msg.includes('login') || msg.includes('unavailable')
-              ? `${msg}. This video may be age-restricted or require login.`;
+              ? `${msg}. This video may be age-restricted or require login.`
               : msg);
           }
         }
