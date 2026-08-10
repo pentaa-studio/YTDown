@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
-const { getClient, resetClient, extractVideoId } = require('../lib/youtube');
+const { getClient, resetClient, extractVideoId, DOWNLOAD_CLIENT_TYPES } = require('../lib/youtube');
 const { Storage } = require('@google-cloud/storage');
 
 const SHORT_SERVICE_URL = 'https://ytdown-short-791554179661.europe-west1.run.app';
@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
 
     if (hasGcsKey) {
       console.log('[Short] Downloading from YouTube and uploading to GCS...');
-      const clientTypes = ['ANDROID', 'WEB', 'iOS', 'MWEB', 'WEB_EMBEDDED_PLAYER'];
+      const clientTypes = DOWNLOAD_CLIENT_TYPES;
       for (const clientType of clientTypes) {
         try {
           resetClient();

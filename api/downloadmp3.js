@@ -1,5 +1,5 @@
 const { Readable } = require('stream');
-const { getClient, resetClient, extractVideoId } = require('../lib/youtube');
+const { getClient, resetClient, extractVideoId, DOWNLOAD_CLIENT_TYPES } = require('../lib/youtube');
 
 async function fetchAudio(videoId, clientType = 'ANDROID') {
   const youtube = await getClient({ clientType });
@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
   try {
     const videoId = extractVideoId(videoURL);
     let result;
-    const clientTypes = ['ANDROID', 'WEB', 'iOS', 'MWEB', 'WEB_EMBEDDED_PLAYER'];
+    const clientTypes = DOWNLOAD_CLIENT_TYPES;
 
     for (const clientType of clientTypes) {
       try {

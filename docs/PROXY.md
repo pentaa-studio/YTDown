@@ -1,8 +1,18 @@
-# Proxy Setup (Production)
+# Proxy / Auth Setup (Production)
 
 YouTube blocks requests from datacenter IPs (Vercel, AWS, etc.). Downloads work locally (residential IP) but fail in production with "Video is login required" or similar.
 
-## Solution: Residential Proxy
+## Option A: YouTube cookies (quick)
+
+Export cookies from a logged-in browser session and set them on Vercel:
+
+- **Name**: `YOUTUBE_COOKIE`
+- **Value**: cookie header string (`SID=...; HSID=...; ...`)
+- **Environment**: Production (and Preview if needed)
+
+Refresh the value when the session expires (login required errors return).
+
+## Option B: Residential proxy
 
 Route YouTube requests through a residential proxy so they appear to come from a real user.
 
@@ -32,4 +42,4 @@ Redeploy the project for the env var to take effect.
 
 ---
 
-**Note**: Proxies are usually paid after the trial. Without a proxy, downloads will fail in production for most videos.
+**Note**: Cookies expire; proxies are usually paid after the trial. Without one of these, downloads will fail in production for most videos.
